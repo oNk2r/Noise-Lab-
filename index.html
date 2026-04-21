@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NoiseLab — Image Noise Lab</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="noiselab.css">
+</head>
+<body>
+
+<!-- ─── Spinner Overlay ─────────────────────────────────── -->
+<div class="spinner-overlay" id="spinner">
+  <div class="spinner-box">
+    <div class="spinner"></div>
+    <div class="spinner-label" id="spinner-label">Processing</div>
+    <div class="spinner-sub" id="spinner-sub">Applying algorithms...</div>
+  </div>
+</div>
+
+<!-- ─── Error Toast ─────────────────────────────────────── -->
+<div class="toast" id="toast">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <span id="toast-msg">Error message</span>
+</div>
+
+<!-- ─── Header ──────────────────────────────────────────── -->
+<!-- ─── Header Redesign ─────────────────────────────────── -->
+<header class="hero-header">
+  <div class="hero-pill">IMAGE PROCESSING</div>
+  <h1 class="hero-title">Noise<span>.Lab</span></h1>
+  <div class="hero-subtitle">gaussian . median . salt &amp; pepper</div>
+</header>
+
+<!-- ─── Main ─────────────────────────────────────────────── -->
+<main>
+
+  <!-- Upload -->
+  <section class="upload-section">
+    <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+      <div class="dz-bg" id="dz-bg"></div>
+      <div class="dz-content" id="dz-content">
+        <div class="dz-icon" id="dz-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+          </svg>
+        </div>
+        <div class="dz-title" id="dz-title">Drag & drop image here</div>
+        <div class="dz-sub" id="dz-sub">or click to browse - jpg, png, webp</div>
+      </div>
+    </div>
+    <div style="text-align: center; margin-top: 24px; display: flex; flex-direction: column; align-items: center; gap: 12px;">
+      <span style="font-family: var(--mono); font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em;">Or try an example</span>
+      <div style="display: flex; gap: 16px;">
+        <div class="example-img-wrap" onclick="loadExampleImage('cameraman.png')" title="Load Cameraman">
+          <img src="cameraman.png" alt="Cameraman" onerror="this.src='https://images.unsplash.com/photo-1510214156637-02436f561ee6?w=150&h=150&fit=crop'" />
+        </div>
+        <div class="example-img-wrap" onclick="loadExampleImage('flowerr.jpg')" title="Load Flower">
+          <img src="flowerr.jpg" alt="Flower" onerror="this.src='https://unsplash.com/photos/grayscale-photo-of-white-daisy-R_8bKZIfDns'" />
+      </div>
+    </div>
+    <input type="file" id="file-input" accept="image/*" />
+  </section>
+
+  <!-- Compare -->
+  <section class="compare-section hidden" id="compare-section" style="margin-bottom:32px;">
+    <div class="compare-selects">
+      <div class="compare-select-group">
+        <label>Image B</label>
+        <select id="compare-b" onchange="updateCompare()"></select>
+      </div>
+      <div class="compare-select-group">
+        <label>Image A</label>
+        <select id="compare-a" onchange="updateCompare()"></select>
+      </div>
+    </div>
+    <div class="compare-inner" id="compare-inner">
+      <canvas id="compare-canvas-a" class="compare-canvas-a"></canvas>
+      <canvas id="compare-canvas-b" class="compare-canvas-b"></canvas>
+      <div class="compare-divider" id="compare-divider"></div>
+      <div class="compare-handle" id="compare-handle">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
+          <path d="M8 9l-4 3 4 3M16 9l4 3-4 3"/>
+        </svg>
+      </div>
+    </div>
+    <div class="compare-labels">
+      <span id="label-b">Image B</span>
+      <span id="label-a">Image A</span>
+    </div>
+    
+    <div class="compare-metadata">
+      <div class="meta-col">
+        <div class="meta-line">Params: <span id="param-b">N/A</span></div>
+        <div class="meta-line">PSNR: <span id="psnr-b">--</span></div>
+        <div class="meta-line">MSE: <span id="mse-b">--</span></div>
+        <button class="btn-dl" onclick="downloadCanvas('b')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg> Download
+        </button>
+      </div>
+      <div class="meta-col meta-right">
+        <div class="meta-line">Params: <span id="param-a">N/A</span></div>
+        <div class="meta-line">PSNR: <span id="psnr-a">--</span></div>
+        <div class="meta-line">MSE: <span id="mse-a">--</span></div>
+        <button class="btn-dl" onclick="downloadCanvas('a')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+          </svg> Download
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Controls -->
+  <section class="hidden" id="controls-section" style="margin-bottom:32px;">
+    <div class="controls-bar">
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Gaussian &sigma;</span>
+          <span class="ctrl-val" id="sigma-val">25</span>
+        </div>
+        <input type="range" class="ctrl-slider" id="sigma-slider" min="5" max="60" value="25" oninput="document.getElementById('sigma-val').textContent=this.value" />
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">S&amp;P Noise Prob</span>
+          <span class="ctrl-val" id="sp-val">5%</span>
+        </div>
+        <input type="range" class="ctrl-slider" id="sp-slider" min="1" max="20" value="5" oninput="document.getElementById('sp-val').textContent=this.value+'%'" />
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Kernel Size</span>
+          <span class="ctrl-val">N&times;N</span>
+        </div>
+        <select id="kernel-size">
+          <option value="3">3×3</option>
+          <option value="5" selected>5×5</option>
+          <option value="7">7×7</option>
+        </select>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Analysis Target</span>
+          <span class="ctrl-val">Filter</span>
+        </div>
+        <select id="algo-select">
+          <option value="all" selected>All Filters & Noise</option>
+          <option value="gn">Gaussian Noise</option>
+          <option value="spn">Salt & Pepper Noise</option>
+          <option value="mf">Mean Filter</option>
+          <option value="medf">Median Filter</option>
+          <option value="gf">Gaussian Filter</option>
+        </select>
+      </div>
+    </div>
+    
+    <button class="btn btn-primary massive" id="process-btn" onclick="processImage()">
+      ▶ Apply Noise Filters
+    </button>
+  </section>
+
+</main>
+
+<!-- ─── Hidden processing canvas ─────────────────────────── -->
+<canvas id="proc-canvas" style="display:none;"></canvas>
+
+<script src="noiselab.js"></script>
+</body>
+</html>
